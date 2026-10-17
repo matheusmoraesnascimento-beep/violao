@@ -54,6 +54,16 @@ test('afinador: escolher a corda manualmente e voltar ao automático', async ({ 
   await expect(page.locator('.str.sel')).toHaveCount(0);
 });
 
+test('telas não estouram a largura em 360px', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  for (const r of ['home', 'placement', 'settings', 'tuner', 'library', 'progress', 'debug']) {
+    await page.goto(`/?timescale=0.05#/${r}`);
+    await page.waitForTimeout(150);
+    const w = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
+    expect(w.sw, r).toBeLessThanOrEqual(w.iw);
+  }
+});
+
 test.describe('com microfone falso do Chromium', () => {
   test.use({ permissions: ['microphone'] });
 

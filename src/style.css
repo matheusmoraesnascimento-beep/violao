@@ -50,3 +50,18 @@ button:disabled { opacity: 0.5; cursor: default; }
 .retune { margin: 8px 0; }
 table { width: 100%; border-collapse: collapse; }
 td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--card); }
+/* Telas estreitas (360px): evita sobreposição e rolagem horizontal. */
+img, svg { max-width: 100%; }
+label.card { display: block; }
+label.card > input[type='checkbox'] { width: 22px; height: 22px; margin: 0 8px 0 0; vertical-align: middle; }
+input[type='range'] { display: block; width: 100%; margin: 8px 0; }
+input[type='file'] { display: block; max-width: 100%; margin-top: 6px; }
+small.hint { display: block; margin-top: 4px; }
+.card { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  main { padding: 12px; }
+  .card button, .row button { width: 100%; }
+  .tuner-note { font-size: 4rem; }
+  .row { flex-direction: column; }
+  table { display: block; overflow-x: auto; }
+}
