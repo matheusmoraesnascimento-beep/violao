@@ -69,7 +69,7 @@ describe('regra de BPM', () => {
     expect(recordAttempt(p, 'strum:pop', 0.95, 70).raised).toBe(false);
     expect(recordAttempt(p, 'strum:pop', 0.95, 70).raised).toBe(false);
     const r = recordAttempt(p, 'strum:pop', 0.95, 70);
-    expect(r).toEqual({ raised: true, bpm: 75 });
+    expect(r).toEqual({ raised: true, confirmed: true, bpm: 75 });
     expect(p.bpm['strum:pop']).toBe(75);
     expect(p.attempts['strum:pop']).toEqual([]);
   });
@@ -84,16 +84,35 @@ describe('regra de BPM', () => {
     p.bpm.k = 160;
     recordAttempt(p, 'k', 1, 160);
     recordAttempt(p, 'k', 1, 160);
-    expect(recordAttempt(p, 'k', 1, 160)).toEqual({ raised: false, bpm: 160 });
+    expect(recordAttempt(p, 'k', 1, 160)).toEqual({ raised: false, confirmed: true, bpm: 160 });
   });
-  it('recordApply atualiza melhor BPM e músicas concluídas', () => {
+  it('recordApply só sobe o melhor BPM após 3 acertos seguidos naquele BPM', () => {
+    const p = defaultProgress();
+    recordApply(p, 'strum:down4', 60, 'ok', false);
+    recordApply(p, 'strum:down4', 60, 'ok', false);
+    expect(p.bestStrumBpm).toBe(0);
+    recordApply(p, 'strum:down4', 60, 'close', false);
+    expect(p.bestStrumBpm).toBe(0);
+    for (let i = 0; i < 3; i++) recordApply(p, 'strum:down4', 60, 'ok', false);
+    expect(p.bestStrumBpm).toBe(60);
+    expect(p.bpm['strum:down4']).toBe(65);
+  });
+  it('recordApply confirma o melhor BPM também no limite máximo', () => {
+    const p = defaultProgress();
+    p.bpm.k = 160;
+    for (let i = 0; i < 3; i++) recordApply(p, 'k', 160, 'ok', false);
+    expect(p.bestStrumBpm).toBe(160);
+  });
+  it('recordApply conta cada progressão distinta uma única vez', () => {
     const p = defaultProgress();
     recordApply(p, 'song:pop-g', 70, 'ok', true);
-    expect(p.bestStrumBpm).toBe(70);
     expect(p.songsCompleted).toBe(1);
-    recordApply(p, 'song:pop-g', 90, 'close', true);
-    expect(p.bestStrumBpm).toBe(70);
+    recordApply(p, 'song:pop-g', 70, 'ok', true);
+    recordApply(p, 'song:pop-g', 70, 'close', true);
     expect(p.songsCompleted).toBe(1);
+    recordApply(p, 'song:rock-a', 70, 'ok', true);
+    expect(p.songsCompleted).toBe(2);
+    expect(p.completedSongs).toEqual(['song:pop-g', 'song:rock-a']);
   });
 });
 
@@ -114,6 +133,7 @@ describe('metas de fase', () => {
     expect(advancePhase(p, TODAY)).toBe(true);
     expect(p.phase).toBe(2);
     expect(p.sessionsInPhase).toBe(0);
+    expect(p.bestStrumBpm).toBe(0);
     expect(Object.keys(p.cards)).toHaveLength(5);
   });
   it('advancePhase não avança sem cumprir a meta', () => {

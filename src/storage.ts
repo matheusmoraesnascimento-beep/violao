@@ -31,6 +31,8 @@ export interface Progress {
   bestStrumBpm: number;
   tunedCount: number;
   songsCompleted: number;
+  /** Chaves (`song:<id>`) das progressões distintas já concluídas. */
+  completedSongs: string[];
   sessionsInPhase: number;
   streak: number;
   lastPracticeDay: string | null;
@@ -58,6 +60,7 @@ export function defaultProgress(): Progress {
     bestStrumBpm: 0,
     tunedCount: 0,
     songsCompleted: 0,
+    completedSongs: [],
     sessionsInPhase: 0,
     streak: 0,
     lastPracticeDay: null,

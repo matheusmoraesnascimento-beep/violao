@@ -62,18 +62,18 @@ export function recordAttempt(
   key: string,
   accuracy: number,
   startBpm: number,
-): { raised: boolean; bpm: number } {
+): { raised: boolean; confirmed: boolean; bpm: number } {
   const current = p.bpm[key] ?? startBpm;
   const list = [...(p.attempts[key] ?? []), accuracy].slice(-ATTEMPTS_NEEDED);
   if (shouldRaiseBpm(list)) {
     const next = Math.min(BPM_MAX, current + BPM_STEP);
     p.bpm[key] = next;
     p.attempts[key] = [];
-    return { raised: next > current, bpm: next };
+    return { raised: next > current, confirmed: true, bpm: next };
   }
   p.bpm[key] = current;
   p.attempts[key] = list;
-  return { raised: false, bpm: current };
+  return { raised: false, confirmed: false, bpm: current };
 }
 
 export function recordApply(
@@ -84,11 +84,13 @@ export function recordApply(
   isSong: boolean,
 ): { raised: boolean; bpm: number } {
   const accuracy = VERDICT_ACCURACY[verdict];
-  if (accuracy >= ACCURACY_TARGET) {
-    p.bestStrumBpm = Math.max(p.bestStrumBpm, bpmUsed);
-    if (isSong) p.songsCompleted++;
+  if (isSong && accuracy >= ACCURACY_TARGET && !p.completedSongs.includes(key)) {
+    p.completedSongs.push(key);
+    p.songsCompleted = p.completedSongs.length;
   }
-  return recordAttempt(p, key, accuracy, bpmUsed);
+  const r = recordAttempt(p, key, accuracy, bpmUsed);
+  if (r.confirmed) p.bestStrumBpm = Math.max(p.bestStrumBpm, bpmUsed);
+  return { raised: r.raised, bpm: r.bpm };
 }
 
 export function phaseComplete(p: Progress): boolean {
@@ -105,6 +107,7 @@ export function advancePhase(p: Progress, today: string): boolean {
   if (p.phase >= PHASES.length || !phaseComplete(p)) return false;
   p.phase++;
   p.bestChangesPerMinute = 0;
+  p.bestStrumBpm = 0;
   p.sessionsInPhase = 0;
   ensureCards(p, today);
   return true;
