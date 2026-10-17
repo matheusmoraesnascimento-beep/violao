@@ -23,6 +23,14 @@ export function nearestString(freq: number): StringMatch {
   return { index: best, label: STRING_LABELS[best], targetFreq, cents: centsOff(freq, targetFreq) };
 }
 
+/** Mede `freq` só contra a corda `index`; null se estiver a mais de 400 cents (oitava errada/ruído). */
+export function matchTarget(freq: number, index: number): StringMatch | null {
+  const targetFreq = midiToFreq(OPEN_STRINGS_MIDI[index]);
+  const cents = centsOff(freq, targetFreq);
+  if (!Number.isFinite(cents) || Math.abs(cents) > 400) return null;
+  return { index, label: STRING_LABELS[index], targetFreq, cents };
+}
+
 export type TuneState = 'flat' | 'sharp' | 'ok';
 
 export function tuneState(cents: number, tolerance = 5): TuneState {

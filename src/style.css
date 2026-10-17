@@ -35,8 +35,11 @@ button:disabled { opacity: 0.5; cursor: default; }
 .meter { position: relative; height: 16px; background: var(--card); border-radius: 8px; margin: 12px 0; }
 .meter::after { content: ''; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; background: var(--accent); }
 .needle { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; background: var(--fg); border-radius: 3px; left: 50%; transition: left 0.1s; }
-.strings { display: flex; gap: 8px; justify-content: center; }
-.str { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--card); }
+.strings { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.str { width: 44px; height: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--card); color: var(--fg); border: 2px solid transparent; }
+.str.auto { width: auto; padding: 0 14px; border-radius: 22px; }
+.str.auto.active { border-color: var(--accent); }
+.str.sel { border-color: var(--warn); }
 .str.done { background: var(--accent); color: #06260f; }
 .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 12px 0; }
 .slot { text-align: center; padding: 10px 0; background: var(--card); border-radius: 6px; font-size: 1.2rem; }

@@ -45,6 +45,15 @@ test('encerrar cedo (dedos doendo) mantém a sequência', async ({ page }) => {
   await expect(page.getByTestId('result-streak')).toHaveText('Sequência: 1 dia(s)');
 });
 
+test('afinador: escolher a corda manualmente e voltar ao automático', async ({ page }) => {
+  await page.goto('/?timescale=0.05#/tuner');
+  await page.getByTestId('tuner-string-1').click();
+  await expect(page.getByTestId('tuner-string-1')).toHaveClass(/(^|\s)sel(\s|$)/);
+  await expect(page.getByTestId('tuner-string-1')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('tuner-auto').click();
+  await expect(page.locator('.str.sel')).toHaveCount(0);
+});
+
 test.describe('com microfone falso do Chromium', () => {
   test.use({ permissions: ['microphone'] });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nearestString, tuneState } from '../src/tuner';
+import { matchTarget, nearestString, tuneState } from '../src/tuner';
 
 describe('tuner', () => {
   it('110 Hz é a corda A, afinada', () => {
@@ -18,5 +18,16 @@ describe('tuner', () => {
     expect(tuneState(-12)).toBe('flat');
     expect(tuneState(3)).toBe('ok');
     expect(tuneState(20)).toBe('sharp');
+  });
+  it('matchTarget mede contra a corda escolhida', () => {
+    const m = matchTarget(110, 1);
+    expect(m?.label).toBe('A');
+    expect(m?.cents).toBeCloseTo(0, 3);
+    expect(matchTarget(112, 1)!.cents).toBeGreaterThan(0);
+  });
+  it('matchTarget ignora oitava errada e ruído (>400 cents)', () => {
+    expect(matchTarget(220, 1)).toBeNull();
+    expect(matchTarget(82.41, 1)).toBeNull();
+    expect(matchTarget(82.41, 0)).not.toBeNull();
   });
 });
