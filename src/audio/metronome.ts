@@ -9,19 +9,26 @@ export class Metronome {
   private nextTime = 0;
   private beat = 0;
   private bpm = 60;
+  /** Muda a cada start()/stop(); evita corrida durante o await de resume(). */
+  private token = 0;
+  private active = false;
 
   /** `beat` começa em 0 e cresce sem parar; use `beat % 4` para o tempo do compasso. */
   constructor(private readonly onBeat: (beat: number) => void) {}
 
   get running(): boolean {
-    return this.timer !== undefined;
+    return this.active;
   }
 
   async start(bpm: number): Promise<void> {
+    this.clearTimer();
+    const my = ++this.token;
+    this.active = true;
     const AC: typeof AudioContext =
       window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx ??= new AC();
     await this.ctx.resume();
+    if (my !== this.token) return;
     this.bpm = bpm;
     this.beat = 0;
     this.nextTime = this.ctx.currentTime + 0.05;
@@ -33,6 +40,12 @@ export class Metronome {
   }
 
   stop(): void {
+    this.token++;
+    this.active = false;
+    this.clearTimer();
+  }
+
+  private clearTimer(): void {
     if (this.timer !== undefined) window.clearInterval(this.timer);
     this.timer = undefined;
   }
