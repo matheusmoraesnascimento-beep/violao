@@ -6,7 +6,7 @@ import { listenChord } from '../audio/listen';
 import { Metronome } from '../audio/metronome';
 import { chordPcs, getChord } from '../chords';
 import { PATTERNS } from '../curriculum';
-import { advancePhase, recordApply, reviewCard } from '../scheduler';
+import { advancePhase, changesVerdict, recordApply, reviewCard } from '../scheduler';
 import { buildSession, type Block } from '../session';
 import { todayStr, updateStreak } from '../storage';
 import { NOTE_NAMES } from '../theory';
@@ -70,6 +70,11 @@ const changesBlock: Renderer = (box, app, b, next, result) => {
     stopListen();
     result.changesPerMinute = counter.count;
     app.progress.bestChangesPerMinute = Math.max(app.progress.bestChangesPerMinute, counter.count);
+    const verdict = changesVerdict(counter.count);
+    for (const id of [a, c]) {
+      reviewCard(app.progress, id, verdict, todayStr());
+      result.reviewed[id] = verdict;
+    }
     actions.replaceChildren(
       h('p', {}, `${counter.count} trocas limpas em 1 minuto.`),
       h('button', { 'data-testid': 'next', onclick: next }, 'Continuar'),

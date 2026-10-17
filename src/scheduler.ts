@@ -12,6 +12,16 @@ export const ATTEMPTS_NEEDED = 3;
 
 export const VERDICT_ACCURACY: Record<Verdict, number> = { ok: 0.95, close: 0.75, miss: 0.4 };
 
+/** Trocas limpas em 1 minuto: >= CHANGES_OK é 'ok', >= CHANGES_CLOSE é 'close', senão 'miss'. */
+export const CHANGES_OK = 15;
+export const CHANGES_CLOSE = 8;
+
+export function changesVerdict(count: number): Verdict {
+  if (count >= CHANGES_OK) return 'ok';
+  if (count >= CHANGES_CLOSE) return 'close';
+  return 'miss';
+}
+
 export function reviewCard(p: Progress, chordId: string, verdict: Verdict, today: string): void {
   const card = p.cards[chordId] ?? { box: 0, due: today };
   if (verdict === 'ok') card.box = Math.min(5, card.box + 1);

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  advancePhase, dueChords, ensureCards, phaseComplete, recordApply, recordAttempt, reviewCard, weakestChords,
+  advancePhase, changesVerdict, CHANGES_OK, CHANGES_CLOSE, dueChords, ensureCards, phaseComplete, recordApply, recordAttempt, reviewCard, weakestChords,
 } from '../src/scheduler';
-import { defaultProgress } from '../src/storage';
+import { addDays, defaultProgress } from '../src/storage';
 
 const TODAY = '2026-10-17';
 
@@ -137,5 +137,37 @@ describe('metas de fase', () => {
     p.bestChangesPerMinute = 99;
     for (const c of Object.values(p.cards)) c.box = 5;
     expect(advancePhase(p, TODAY)).toBe(false);
+  });
+});
+
+describe('changesVerdict', () => {
+  it('usa os limiares 15 (ok) e 8 (close)', () => {
+    expect([CHANGES_OK, CHANGES_CLOSE]).toEqual([15, 8]);
+    expect(changesVerdict(20)).toBe('ok');
+    expect(changesVerdict(15)).toBe('ok');
+    expect(changesVerdict(14)).toBe('close');
+    expect(changesVerdict(8)).toBe('close');
+    expect(changesVerdict(7)).toBe('miss');
+    expect(changesVerdict(0)).toBe('miss');
+  });
+});
+
+describe('par de troca é revisado', () => {
+  it('a caixa do par sobe e a fase 2 é concluída em alguns dias', () => {
+    const p = defaultProgress();
+    p.phase = 2;
+    p.bestChangesPerMinute = 30;
+    let day = TODAY;
+    let done = false;
+    for (let i = 0; i < 60 && !done; i++) {
+      ensureCards(p, day);
+      const pair = weakestChords(p, 2);
+      for (const id of dueChords(p, day, pair).slice(0, 3)) reviewCard(p, id, 'ok', day);
+      for (const id of pair) reviewCard(p, id, changesVerdict(20), day);
+      done = phaseComplete(p);
+      day = addDays(day, 1);
+    }
+    expect(done).toBe(true);
+    expect(advancePhase(p, day)).toBe(true);
   });
 });
