@@ -16,14 +16,21 @@ export function listenChord(
   return () => window.clearInterval(id);
 }
 
-/** Mede o ruído de fundo (RMS médio) por `ms` milissegundos. */
+/** Percentil `p` (0-1) de uma lista já ordenada; 0 se vazia. */
+export function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const i = Math.min(sorted.length - 1, Math.max(0, Math.floor(p * sorted.length)));
+  return sorted[i];
+}
+
+/** Mede o ruído de fundo (percentil 25 do RMS, robusto a quem já toca) por `ms` milissegundos. */
 export function calibrate(mic: Mic, ms: number): Promise<number> {
   return new Promise((resolve) => {
     const samples: number[] = [];
     const id = window.setInterval(() => samples.push(rms(mic.read())), 100);
     window.setTimeout(() => {
       window.clearInterval(id);
-      resolve(samples.length ? samples.reduce((a, b) => a + b, 0) / samples.length : 0);
+      resolve(percentile([...samples].sort((a, b) => a - b), 0.25));
     }, ms);
   });
 }
