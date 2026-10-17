@@ -2,7 +2,8 @@ import { calibrate } from './audio/listen';
 import { startMic, type Mic, type MicError } from './audio/mic';
 import type { Verdict } from './audio/chord';
 import { TIME_SCALE } from './config';
-import { loadProgress, saveProgress, type Progress } from './storage';
+import { ensureCards } from './scheduler';
+import { loadProgress, saveProgress, todayStr, type Progress } from './storage';
 
 export interface SessionResult {
   date: string;
@@ -32,6 +33,8 @@ export interface App {
 export type Screen = (root: HTMLElement, app: App) => void | (() => void);
 
 export function createApp(): App {
+  const progress = loadProgress();
+  ensureCards(progress, todayStr());
   let pending: Promise<Mic | null> | undefined;
 
   async function init(): Promise<Mic | null> {
@@ -46,7 +49,7 @@ export function createApp(): App {
   }
 
   const app: App = {
-    progress: loadProgress(),
+    progress,
     mic: null,
     micError: null,
     noiseFloor: 0,

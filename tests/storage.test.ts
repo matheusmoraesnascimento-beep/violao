@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ensureCards } from '../src/scheduler';
 import {
   addDays, daysBetween, defaultProgress, loadProgress, parseProgress, saveProgress, updateStreak, type KV,
 } from '../src/storage';
@@ -96,5 +97,48 @@ describe('persistência', () => {
     expect(p.phase).toBe(2);
     expect(p.settings.micEnabled).toBe(true);
     expect(p.history).toEqual([]);
+  });
+});
+
+describe('parseProgress com entrada malformada', () => {
+  const parse = (o: unknown) => parseProgress(JSON.stringify({ version: 1, phase: 1, cards: {}, ...(o as object) }));
+
+  it('descarta cartas de acordes desconhecidos ou malformados e limita a caixa', () => {
+    const p = parse({
+      phase: 2,
+      cards: {
+        Em: { box: 9, due: '2026-10-17' },
+        Am: { box: -3, due: '2026-10-17' },
+        Zz: { box: 1, due: '2026-10-17' },
+        A: null,
+        E: { box: 'x', due: '2026-10-17' },
+        D: { box: 1, due: 5 },
+        __proto__: { box: 1, due: '2026-10-17' },
+      },
+    });
+    expect(p.cards).toEqual({ Em: { box: 5, due: '2026-10-17' }, Am: { box: 0, due: '2026-10-17' } });
+  });
+  it('history que não é array vira lista vazia e registros inválidos são descartados', () => {
+    expect(parse({ history: 'oi' }).history).toEqual([]);
+    const h = parse({
+      history: [null, 3, { date: '2026-10-17', changesPerMinute: null, minutes: 5, partial: false }, { date: 1 }],
+    }).history;
+    expect(h).toHaveLength(1);
+  });
+  it('limita sensibilidade, coage micEnabled e números', () => {
+    expect(parse({ settings: { sensitivity: 0, micEnabled: 'sim' } }).settings).toEqual({ micEnabled: true, sensitivity: 0.5 });
+    expect(parse({ settings: { sensitivity: 99 } }).settings.sensitivity).toBe(2);
+    const p = parse({ tunedCount: -4, streak: 'x', songsCompleted: 2.7, bpm: { a: 'x', b: 70 }, attempts: { a: [0.9, 'x'], b: 5 } });
+    expect(p.tunedCount).toBe(0);
+    expect(p.streak).toBe(0);
+    expect(p.songsCompleted).toBe(2);
+    expect(p.bpm).toEqual({ b: 70 });
+    expect(p.attempts).toEqual({ a: [0.9] });
+  });
+  it('fase > 1 com cartas vazias ganha cartas após ensureCards', () => {
+    const p = parse({ phase: 3, cards: { Zz: { box: 1, due: '2026-10-17' } } });
+    expect(p.cards).toEqual({});
+    ensureCards(p, '2026-10-17');
+    expect(Object.keys(p.cards).length).toBeGreaterThan(5);
   });
 });

@@ -1,5 +1,6 @@
 import type { Screen } from '../app';
-import { defaultProgress, parseProgress } from '../storage';
+import { ensureCards } from '../scheduler';
+import { defaultProgress, parseProgress, todayStr } from '../storage';
 import { h } from './dom';
 
 export const settingsScreen: Screen = (root, app) => {
@@ -23,7 +24,9 @@ export const settingsScreen: Screen = (root, app) => {
     const file = fileInput.files?.[0];
     if (!file) return;
     try {
-      Object.assign(app.progress, parseProgress(await file.text()));
+      const imported = parseProgress(await file.text());
+      ensureCards(imported, todayStr());
+      Object.assign(app.progress, imported);
       app.save();
       alert('Progresso importado.');
       app.go('home');

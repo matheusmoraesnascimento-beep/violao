@@ -1,3 +1,5 @@
+import { CHORDS } from './chords';
+
 export interface CardState {
   /** Caixa de Leitner, 0-5. */
   box: number;
@@ -69,20 +71,79 @@ export function defaultProgress(): Progress {
   };
 }
 
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const safeKey = (k: string) => k !== '__proto__';
+
+function count(v: unknown, fallback: number): number {
+  return isNum(v) && v >= 0 ? Math.floor(v) : fallback;
+}
+
+function sanitizeCards(v: unknown): Record<string, CardState> {
+  const out: Record<string, CardState> = {};
+  if (!isObj(v)) return out;
+  for (const [id, c] of Object.entries(v)) {
+    if (!Object.hasOwn(CHORDS, id) || !isObj(c) || !isNum(c.box) || typeof c.due !== 'string' || !DAY_RE.test(c.due)) continue;
+    out[id] = { box: Math.min(5, Math.max(0, Math.floor(c.box))), due: c.due };
+  }
+  return out;
+}
+
+function sanitizeHistory(v: unknown): SessionRecord[] {
+  if (!Array.isArray(v)) return [];
+  const out: SessionRecord[] = [];
+  for (const r of v) {
+    if (!isObj(r) || typeof r.date !== 'string' || !isNum(r.minutes)) continue;
+    if (r.changesPerMinute !== null && !isNum(r.changesPerMinute)) continue;
+    out.push({ date: r.date, changesPerMinute: r.changesPerMinute, minutes: r.minutes, partial: r.partial === true });
+  }
+  return out.slice(-60);
+}
+
+/** Valida e normaliza um JSON de progresso (importação ou localStorage). Lança se for inválido. */
 export function parseProgress(json: string): Progress {
-  const o = JSON.parse(json) as Partial<Progress> | null;
+  const o = JSON.parse(json) as Record<string, unknown> | null;
   const ok =
-    o !== null &&
-    typeof o === 'object' &&
+    isObj(o) &&
     o.version === 1 &&
     Number.isInteger(o.phase) &&
-    o.phase! >= 1 &&
-    o.phase! <= 6 &&
-    typeof o.cards === 'object' &&
-    o.cards !== null;
+    (o.phase as number) >= 1 &&
+    (o.phase as number) <= 6 &&
+    isObj(o.cards);
   if (!ok) throw new Error('Arquivo de progresso inválido.');
   const base = defaultProgress();
-  return { ...base, ...o, settings: { ...base.settings, ...o.settings } } as Progress;
+  const bpm: Record<string, number> = {};
+  if (isObj(o.bpm)) for (const [k, v] of Object.entries(o.bpm)) if (safeKey(k) && isNum(v)) bpm[k] = v;
+  const attempts: Record<string, number[]> = {};
+  if (isObj(o.attempts)) {
+    for (const [k, v] of Object.entries(o.attempts)) {
+      if (safeKey(k) && Array.isArray(v)) attempts[k] = v.filter(isNum).slice(-3);
+    }
+  }
+  const st = isObj(o.settings) ? o.settings : {};
+  const sensitivity = isNum(st.sensitivity) ? Math.min(2, Math.max(0.5, st.sensitivity)) : base.settings.sensitivity;
+  const completedSongs = Array.isArray(o.completedSongs)
+    ? [...new Set(o.completedSongs.filter((x): x is string => typeof x === 'string'))]
+    : [];
+  return {
+    version: 1,
+    phase: o.phase as number,
+    placementDone: o.placementDone === true,
+    cards: sanitizeCards(o.cards),
+    bpm,
+    attempts,
+    bestChangesPerMinute: isNum(o.bestChangesPerMinute) && o.bestChangesPerMinute >= 0 ? o.bestChangesPerMinute : 0,
+    bestStrumBpm: isNum(o.bestStrumBpm) && o.bestStrumBpm >= 0 ? o.bestStrumBpm : 0,
+    tunedCount: count(o.tunedCount, 0),
+    songsCompleted: count(o.songsCompleted, 0),
+    completedSongs,
+    sessionsInPhase: count(o.sessionsInPhase, 0),
+    streak: count(o.streak, 0),
+    lastPracticeDay: typeof o.lastPracticeDay === 'string' && DAY_RE.test(o.lastPracticeDay) ? o.lastPracticeDay : null,
+    history: sanitizeHistory(o.history),
+    settings: { micEnabled: typeof st.micEnabled === 'boolean' ? st.micEnabled : base.settings.micEnabled, sensitivity },
+  };
 }
 
 export function loadProgress(store: KV = localStorage): Progress {

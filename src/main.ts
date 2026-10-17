@@ -42,7 +42,14 @@ function render(): void {
   const name = location.hash.replace(/^#\//, '') || 'home';
   nav.replaceChildren(...links.map(([r, label]) => h('a', { href: '#/' + r, class: r === name ? 'active' : '' }, label)));
   root.replaceChildren();
-  cleanup = (routes[name] ?? homeScreen)(root, app);
+  try {
+    cleanup = (routes[name] ?? homeScreen)(root, app);
+  } catch (e) {
+    console.error(e);
+    cleanup = undefined;
+    root.replaceChildren();
+    cleanup = homeScreen(root, app);
+  }
 }
 
 window.addEventListener('hashchange', render);
