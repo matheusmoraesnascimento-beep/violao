@@ -31,16 +31,11 @@ export interface App {
 
 export type Screen = (root: HTMLElement, app: App) => void | (() => void);
 
-const MIC_TIMEOUT_MS = 8000;
-
 export function createApp(): App {
   let pending: Promise<Mic | null> | undefined;
 
   async function init(): Promise<Mic | null> {
-    const timeout = new Promise<{ error: MicError }>((res) =>
-      window.setTimeout(() => res({ error: 'denied' }), MIC_TIMEOUT_MS),
-    );
-    const r = await Promise.race([startMic(), timeout]);
+    const r = await startMic();
     if ('error' in r) {
       app.micError = r.error;
       return null;
