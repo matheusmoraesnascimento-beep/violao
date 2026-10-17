@@ -7,6 +7,9 @@ import { PLACEMENT_CHORDS, applyPlacement } from '../placement';
 import { todayStr } from '../storage';
 import { chordCard, h, selfButtons } from './dom';
 
+/** Ignora o microfone logo após mostrar um acorde, para o som do anterior não valer. */
+const COOLDOWN_MS = 800;
+
 export const placementScreen: Screen = (root, app) => {
   const results: Record<string, Verdict> = {};
   let i = 0;
@@ -27,6 +30,7 @@ export const placementScreen: Screen = (root, app) => {
     const my = i;
     const id = PLACEMENT_CHORDS[my];
     const live = h('p', { class: 'live' }, '');
+    const shownAt = Date.now();
     const rate = (v: Verdict) => {
       if (i !== my) return;
       results[id] = v;
@@ -49,6 +53,7 @@ export const placementScreen: Screen = (root, app) => {
       live.textContent = 'Ouvindo… toque o acorde.';
       let okRun = 0;
       stopListen = listenChord(mic, () => chordPcs(getChord(id)), app.minRms(), (r) => {
+        if (Date.now() < shownAt + COOLDOWN_MS) return;
         okRun = r.verdict === 'ok' ? okRun + 1 : 0;
         if (okRun >= 2) rate('ok');
       });

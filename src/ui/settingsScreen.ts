@@ -49,8 +49,12 @@ export const settingsScreen: Screen = (root, app) => {
           onclick: () => {
             const blob = new Blob([JSON.stringify(app.progress, null, 2)], { type: 'application/json' });
             const a = h('a', { href: URL.createObjectURL(blob), download: 'violao-progresso.json' });
+            document.body.append(a);
             a.click();
-            URL.revokeObjectURL(a.href);
+            setTimeout(() => {
+              a.remove();
+              URL.revokeObjectURL(a.href);
+            }, 0);
           },
         },
         'Exportar progresso',

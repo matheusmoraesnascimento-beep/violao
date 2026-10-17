@@ -21,6 +21,7 @@ export function mountTuner(box: HTMLElement, app: App, onAllTuned?: () => void):
 
   const tuned = new Set<number>();
   let okRun = 0;
+  let lastIndex = -1;
   let fired = false;
   let stopped = false;
   let timer: number | undefined;
@@ -45,6 +46,8 @@ export function mountTuner(box: HTMLElement, app: App, onAllTuned?: () => void):
       const state = tuneState(m.cents);
       status.textContent = `${m.label}: ${MESSAGES[state]}`;
 
+      if (m.index !== lastIndex) okRun = 0;
+      lastIndex = m.index;
       okRun = state === 'ok' ? okRun + 1 : 0;
       if (okRun >= 3) {
         tuned.add(m.index);

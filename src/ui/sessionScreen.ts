@@ -15,6 +15,9 @@ import { mountTuner } from './tunerView';
 
 type Renderer = (box: HTMLElement, app: App, b: Block, next: () => void, result: SessionResult) => () => void;
 
+/** Ignora o microfone logo após mostrar um acorde, para o som do anterior não valer. */
+const COOLDOWN_MS = 800;
+
 const VERDICT_TEXT: Record<Verdict, string> = { ok: 'Certo!', close: 'Quase lá', miss: 'Ainda não' };
 
 function liveText(v: Verdict, missing: number[]): string {
@@ -189,6 +192,7 @@ const reviewBlock: Renderer = (box, app, b, next, result) => {
     const my = i;
     const id = ids[my];
     const live = h('p', { class: 'live' }, '');
+    const shownAt = Date.now();
     const rate = (v: Verdict) => {
       if (i !== my) return;
       reviewCard(app.progress, id, v, today);
@@ -206,6 +210,7 @@ const reviewBlock: Renderer = (box, app, b, next, result) => {
       }
       let okRun = 0;
       stopListen = listenChord(mic, () => chordPcs(getChord(id)), app.minRms(), (r) => {
+        if (Date.now() < shownAt + COOLDOWN_MS) return;
         live.textContent = liveText(r.verdict, r.missing);
         okRun = r.verdict === 'ok' ? okRun + 1 : 0;
         if (okRun >= 2) rate('ok');
@@ -279,6 +284,7 @@ export const sessionScreen: Screen = (root, app) => {
     title.textContent = `${idx + 1}/${blocks.length} · ${b.title} (${b.minutes} min)`;
     stopBlock = RENDERERS[b.kind](stage, app, b, () => {
       idx++;
+      app.save();
       show();
     }, result);
   }
@@ -305,5 +311,6 @@ export const sessionScreen: Screen = (root, app) => {
   return () => {
     stopBlock();
     stopRetune?.();
+    app.save();
   };
 };
